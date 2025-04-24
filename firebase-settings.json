@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "cedar-roots-453719",
+  "private_key_id": "dc58941c4ec9daeb363269bd3e89d21112c9c1f8",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCRRNBqBPROiGEI\nad5pLTb/aVbLtL6MJMztw3TzjiTyhCnk4fvxW7P8zIpY75gcrdxMguaTN8e6CH1X\nq8j9J1iUebK4hCzeXN52f8jJYCt6mxz5T0clGkV4LHK/XDwc8yIGGbhkU5piDFt7\nSbOnH/hCpnUC7AThTgPnEBDdocIwpSFc4P6oLgcd6G/xvxJ44ngfAz+MoP1wDDM5\nuKi09sr6P7UIxfn5DVl9VzK8ZmEyr3Ai5I6MYyaHZzmsdvC0UMOgtHTTicZhjdx5\nTd9G2GwtMOoKvZ2XDcDcP6EwNOahQiQn3RwqrvZMzvQDf+HqeBMAKpjKogOD/pSP\n7iOkPyRRAgMBAAECggEAAoyDXuvCbIjgmkAwkR2BWIkCuJan68vx3mEIwxwoA84O\nCKv6aUCMNUokBGIyA+JxbndV4aRORuyI2Kojmghubhdn1DJCmo4H3rCXHTf6H6/I\ngqKeplClPKwbtYAH/Cskq8bpwRJZu2KAqvZ8AJOx2BXms+BU08ViwFNqqFdry9kL\n2Q7hQt8uQtB+2uuVAYB4jFzA/cXtROENHosy6GxC4uYwZPF5mT6zZxQqzfQ0Ubg7\nx8zRGt5QjhWa3/zoS24x3rMqqxcrt9nWUuwpFtaHqewnb+ZMDHf3/HUhTROIYGCG\n3vFbgP/wpHknIHCYu0xzPXCnTfue/I8NIs9G3hgd0QKBgQDFfjR94e/NkpvlOiYn\n79zJ8locJOT4TYbvdZ/wgcyzZLch/IOduZtXuUNoDpPbbv5zYpNziooa1VbNKn6u\nN24RXzetXROIlYTKMDECTISPhU3kyq1dJ89za58+QyOBtPnAxC9SDDKtx+MUnRai\ncRxwTKzpFFvAArr7iaFFuaTnPQKBgQC8TfJGn30Y5m12gd4HF/vaeUcvWaVxx3ne\n4pDl3JsobXGo1feuHX+/G6pK9znxRPRkd6XtUUXBRRAmSfT1Z3cUqOtnNe+is94/\nblhsWXlLCdeq30zrM1pfpBFaKD4aHtH6EEO9fdUmfKDqmg+xmn0h2F6TVlbOOMfY\nUmhC00AipQKBgC4aVyCn1LY1qmTpnSynhvAxvi1hw33fg0d1OwAHHQUn1sR9UTBJ\nuuTQn9azyHpqP8Yp1egcCD9ZXCkK6YW79NrjUnkLCFtTJCua8mXp/OwQH23wjmX3\nvCrijcsYGzrVR5Rjd/R8WnxM9ErEnRsQsqXYkGjc0spRGNtNdrNzMfa1AoGAARJc\nf6RmvN6K3vLMRbQQPeUUz6Mt+uDMw8T8WCKSS3+b9v8IwtfuIzNQG88eaE4hKfU4\nX4pn4Dq5Zc5j84WcOuTfOh4neACYEjpZjHxR4Whz7sgIkwoeyI6Rfrbd654jSc4P\n5KMztF1fORaZYkRj0+58U1BZfCD8mjGV4FN9ePUCgYBdXGZq206R96T8/HI77WEC\nAMe+efxFH8hTiSu0ktdnzaHWqvwAu2LXR6T815yHkxowo8BbRmaanIu6EPZFoG1p\nMiekjNuz1I9MRD4WsvwstCA0nmlWIOQAhTf46Raedanu3GI/J55L+0fMY9C3EvHJ\nxQU4cOAc6bU4nt3FThEOFw==\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@cedar-roots-453719.iam.gserviceaccount.com",
+  "client_id": "110479140428700160311",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40cedar-roots-453719.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
