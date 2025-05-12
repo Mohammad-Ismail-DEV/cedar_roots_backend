@@ -1,35 +1,30 @@
 module.exports = (sequelize, DataTypes) => {
-  const Message = sequelize.define('Message', {
+  const Message = sequelize.define("Message", {
     sender_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
     },
     receiver_id: {
       type: DataTypes.INTEGER,
-      allowNull: false
+      allowNull: false,
     },
     content: {
       type: DataTypes.TEXT,
-      allowNull: false
+      allowNull: false,
     },
     type: {
       type: DataTypes.TEXT,
-      allowNull: true
+      allowNull: true,
     },
     sent_at: {
       type: DataTypes.DATE,
-      allowNull: false
+      allowNull: false,
     },
     read_status: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false
-    }
+      type: DataTypes.STRING,
+      defaultValue: "sent",
+    },
   });
-
-  Message.associate = (models) => {
-    Message.belongsTo(models.User, { as: 'sender', foreignKey: 'sender_id' });
-    Message.belongsTo(models.User, { as: 'receiver', foreignKey: 'receiver_id' });
-  };
 
   return Message;
 };

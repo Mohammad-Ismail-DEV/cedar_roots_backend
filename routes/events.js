@@ -5,8 +5,27 @@ const auth = require('../middleware/authMiddleware');
 
 // Create Event
 router.post('/', auth, async (req, res) => {
+  const { title, description, location, date_time, organization_id, collaborators = [] } = req.body;
   try {
-    const event = await Event.create({ ...req.body, organizer_id: req.user.id });
+    const event = await Event.create({
+      title,
+      description,
+      location,
+      date_time,
+      organizer_id: req.user.id,
+      organization_id
+    });
+
+    // Register collaborators (optional roles default to 'collaborator')
+    for (const userId of collaborators) {
+      await EventParticipant.create({
+        event_id: event.id,
+        user_id: userId,
+        role: 'collaborator',
+        status: 'invited'
+      });
+    }
+
     res.json(event);
   } catch (err) {
     res.status(400).json({ error: err.message });
