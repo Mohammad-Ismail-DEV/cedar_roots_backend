@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { Like } = require("../models");
 const auth = require("../middleware/authMiddleware");
+const sendUserNotification = require("../utils/sendUserNotification");
 
 router.post("/", auth, async (req, res) => {
   try {
@@ -18,6 +19,24 @@ router.post("/", auth, async (req, res) => {
         post_id: req.body.post_id,
         created_at: new Date(),
       });
+
+      const post = await Post.findByPk(req.body.post_id);
+      const sender = await User.findByPk(req.user.id);
+
+      if (post && post.user_id !== req.user.id) {
+        await sendUserNotification({
+          userId: post.user_id,
+          title: "New Like",
+          body: `${sender.name} liked your post.`,
+          type: "like",
+          data: {
+            postId: post.id,
+            senderId: sender.id,
+            senderName: sender.name,
+          },
+        });
+      }
+
       return res.json({ liked: true });
     }
   } catch (err) {

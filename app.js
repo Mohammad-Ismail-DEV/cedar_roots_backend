@@ -32,6 +32,10 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/posts", require("./routes/posts"));
 app.use("/comments", require("./routes/comments"));
 app.use("/likes", require("./routes/likes"));
+app.use("/organization_members", require("./routes/organization_members"));
+app.use("/organization_followers", require("./routes/organization_followers"));
+app.use("/search", require("./routes/search"));
+app.use("/announcements", require("./routes/announcements"));
 
 // Start server after DB sync (with WebSocket logic in socket.js)
 const db = require("./models");

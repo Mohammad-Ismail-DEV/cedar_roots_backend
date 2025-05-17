@@ -3,22 +3,6 @@ const router = express.Router();
 const { Notification } = require('../models');
 const auth = require('../middleware/authMiddleware');
 
-// Create a notification
-router.post('/', auth, async (req, res) => {
-  try {
-    const notification = await Notification.create({
-      user_id: req.user.id,
-      type: req.body.type,
-      message: req.body.message,
-      is_read: false,
-      created_at: new Date(),
-    });
-    res.json(notification);
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
-
 // Get all notifications for logged in user
 router.get('/', auth, async (req, res) => {
   try {

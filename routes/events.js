@@ -1,28 +1,99 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { Event, EventParticipant, User } = require('../models');
-const auth = require('../middleware/authMiddleware');
+const { Op } = require("sequelize");
+
+const {
+  Event,
+  EventParticipant,
+  User,
+  Organization,
+  OrganizationMember,
+  OrganizationFollower,
+} = require("../models");
+
+const auth = require("../middleware/authMiddleware");
+const sendUserNotification = require("../utils/sendUserNotification");
+
+async function isOrgAdmin(userId, organizationId) {
+  const member = await OrganizationMember.findOne({
+    where: { user_id: userId, organization_id: organizationId },
+  });
+  return member && (member.role === "owner" || member.role === "admin");
+}
 
 // Create Event
-router.post('/', auth, async (req, res) => {
-  const { title, description, location, date_time, organization_id, collaborators = [] } = req.body;
+router.post("/", auth, async (req, res) => {
+  const {
+    title,
+    description,
+    location,
+    date_time,
+    organization_id,
+    collaborators = [],
+  } = req.body;
+
   try {
+    const authorized = await isOrgAdmin(req.user.id, organization_id);
+    if (!authorized)
+      return res.status(403).json({
+        error: "Not authorized to create events for this organization.",
+      });
+
     const event = await Event.create({
       title,
       description,
       location,
       date_time,
-      organizer_id: req.user.id,
-      organization_id
+      organization_id,
+      created_at: new Date(),
+      updated_at: new Date(),
     });
 
-    // Register collaborators (optional roles default to 'collaborator')
+    const creator = await User.findByPk(req.user.id);
+
+    // Notify collaborators
     for (const userId of collaborators) {
       await EventParticipant.create({
         event_id: event.id,
         user_id: userId,
-        role: 'collaborator',
-        status: 'invited'
+        role: "collaborator",
+        status: "invited",
+      });
+
+      const user = await User.findByPk(userId);
+      if (user) {
+        await sendUserNotification({
+          userId: user.id,
+          title: "Event Invitation",
+          body: `${creator.name} invited you to collaborate on ${title}.`,
+          type: "event_invite",
+          data: { eventId: event.id, organizerName: creator.name },
+        });
+      }
+    }
+
+    // Notify org followers and members (excluding creator)
+    const [followers, members] = await Promise.all([
+      OrganizationFollower.findAll({ where: { organization_id } }),
+      OrganizationMember.findAll({ where: { organization_id } }),
+    ]);
+
+    const notifyUserIds = new Set();
+
+    for (const f of followers) {
+      if (f.user_id !== req.user.id) notifyUserIds.add(f.user_id);
+    }
+    for (const m of members) {
+      if (m.user_id !== req.user.id) notifyUserIds.add(m.user_id);
+    }
+
+    for (const userId of notifyUserIds) {
+      await sendUserNotification({
+        userId,
+        title: "New Event Created",
+        body: `${creator.name} created a new event: ${title}`,
+        type: "new_event",
+        data: { eventId: event.id, organizerName: creator.name },
       });
     }
 
@@ -32,10 +103,66 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
-// Get All Events
-router.get('/', async (req, res) => {
+// Join Event
+router.post("/:id/join", auth, async (req, res) => {
   try {
-    const events = await Event.findAll({ include: User });
+    const participation = await EventParticipant.create({
+      event_id: req.params.id,
+      user_id: req.user.id,
+      status: "joined",
+    });
+
+    const event = await Event.findByPk(req.params.id);
+    const user = await User.findByPk(req.user.id);
+
+    if (event && user) {
+      const participants = await EventParticipant.findAll({
+        where: { event_id: event.id, role: "collaborator" },
+      });
+
+      for (const participant of participants) {
+        if (participant.user_id !== req.user.id) {
+          await sendUserNotification({
+            userId: participant.user_id,
+            title: "New Participant",
+            body: `${user.name} joined the event: ${event.title}`,
+            type: "event_join",
+            data: { eventId: event.id, joinerName: user.name },
+          });
+        }
+      }
+    }
+
+    res.json(participation);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// Get All Events (optionally filtered by user connections)
+router.get("/", async (req, res) => {
+  const userId = parseInt(req.query.user_id);
+
+  try {
+    let orgIds = [];
+
+    if (!isNaN(userId)) {
+      const follows = await OrganizationFollower.findAll({
+        where: { user_id: userId },
+      });
+      orgIds = follows.map((f) => f.organization_id);
+    }
+
+    const whereCondition = !isNaN(userId)
+      ? { organization_id: { [Op.in]: orgIds } }
+      : {};
+
+    const events = await Event.findAll({
+      where: whereCondition,
+      include: [{ model: Organization, attributes: ["id", "name", "logo"] }],
+      order: [["created_at", "DESC"]],
+    });
+
     res.json(events);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -43,10 +170,13 @@ router.get('/', async (req, res) => {
 });
 
 // Get Event by ID
-router.get('/:id', async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
-    const event = await Event.findByPk(req.params.id, { include: [User] });
-    if (!event) return res.status(404).json({ error: 'Event not found' });
+    const event = await Event.findByPk(req.params.id, {
+      include: [{ model: Organization, attributes: ["id", "name", "logo"] }],
+    });
+
+    if (!event) return res.status(404).json({ error: "Event not found" });
     res.json(event);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -54,11 +184,18 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update Event
-router.put('/:id', auth, async (req, res) => {
+router.put("/:id", auth, async (req, res) => {
   try {
-    const [updated] = await Event.update(req.body, { where: { id: req.params.id, organizer_id: req.user.id } });
-    if (!updated) return res.status(403).json({ error: 'Unauthorized or event not found' });
     const event = await Event.findByPk(req.params.id);
+    if (!event) return res.status(404).json({ error: "Event not found" });
+
+    const authorized = await isOrgAdmin(req.user.id, event.organization_id);
+    if (!authorized)
+      return res
+        .status(403)
+        .json({ error: "Not authorized to update this event." });
+
+    await event.update(req.body);
     res.json(event);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -66,23 +203,35 @@ router.put('/:id', auth, async (req, res) => {
 });
 
 // Delete Event
-router.delete('/:id', auth, async (req, res) => {
+router.delete("/:id", auth, async (req, res) => {
   try {
-    const deleted = await Event.destroy({ where: { id: req.params.id, organizer_id: req.user.id } });
-    if (!deleted) return res.status(403).json({ error: 'Unauthorized or event not found' });
-    res.json({ message: 'Event deleted' });
+    const event = await Event.findByPk(req.params.id);
+    if (!event) return res.status(404).json({ error: "Event not found" });
+
+    const authorized = await isOrgAdmin(req.user.id, event.organization_id);
+    if (!authorized)
+      return res
+        .status(403)
+        .json({ error: "Not authorized to delete this event." });
+
+    await event.destroy();
+    res.json({ message: "Event deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Join Event
-router.post('/:id/join', auth, async (req, res) => {
+// Get Event Participants
+router.get("/:id/participants", auth, async (req, res) => {
   try {
-    const participation = await EventParticipant.create({ event_id: req.params.id, user_id: req.user.id, status: 'joined' });
-    res.json(participation);
+    const participants = await EventParticipant.findAll({
+      where: { event_id: req.params.id },
+      include: [{ model: User, attributes: ["id", "name", "profile_pic"] }],
+    });
+
+    res.json(participants);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
