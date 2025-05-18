@@ -398,7 +398,7 @@ module.exports = function initializeSocket(server) {
       try {
         const dbRequest = await db.Connection.create({
           sender_id: senderId,
-          reciever_id: receiverId,
+          receiver_id: receiverId,
           status: "pending",
           created_at: new Date(),
         });
@@ -454,7 +454,7 @@ module.exports = function initializeSocket(server) {
         if (!connection) return;
 
         const senderId = connection.sender_id;
-        const receiverId = connection.reciever_id;
+        const receiverId = connection.receiver_id;
 
         if (accept) {
           connection.status = "accepted";

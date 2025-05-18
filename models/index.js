@@ -37,7 +37,6 @@ db.Comment = require("./Comment")(sequelize, DataTypes);
 db.Like = require("./Like")(sequelize, DataTypes);
 db.Announcement = require("./Announcement")(sequelize, Sequelize);
 
-
 // User ↔ UserVerification
 db.User.hasOne(db.UserVerification, { foreignKey: "user_id" });
 db.UserVerification.belongsTo(db.User, { foreignKey: "user_id" });
@@ -80,11 +79,11 @@ db.User.hasMany(db.Connection, {
   as: "sentConnections",
 });
 db.User.hasMany(db.Connection, {
-  foreignKey: "reciever_id",
+  foreignKey: "receiver_id",
   as: "receivedConnections",
 });
 db.Connection.belongsTo(db.User, { foreignKey: "sender_id", as: "Sender" });
-db.Connection.belongsTo(db.User, { foreignKey: "reciever_id", as: "Receiver" });
+db.Connection.belongsTo(db.User, { foreignKey: "receiver_id", as: "Receiver" });
 
 // Organization → Events
 db.Organization.hasMany(db.Event, { foreignKey: "organization_id" });

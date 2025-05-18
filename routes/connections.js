@@ -11,13 +11,13 @@ router.post("/", auth, async (req, res) => {
   try {
     const connection = await Connection.create({
       sender_id: req.user.id,
-      reciever_id: req.body.reciever_id,
+      receiver_id: req.body.receiver_id,
       status: "pending",
       created_at: new Date(),
     });
 
     const sender = await User.findByPk(req.user.id);
-    const receiver = await User.findByPk(req.body.reciever_id);
+    const receiver = await User.findByPk(req.body.receiver_id);
 
     if (receiver) {
       await sendUserNotification({
@@ -49,7 +49,7 @@ router.put("/respond", auth, async (req, res) => {
       await connection.save();
 
       const sender = await User.findByPk(connection.sender_id);
-      const receiver = await User.findByPk(connection.reciever_id);
+      const receiver = await User.findByPk(connection.receiver_id);
 
       if (sender) {
         await sendUserNotification({
@@ -77,8 +77,18 @@ router.get("/", auth, async (req, res) => {
   try {
     const connections = await Connection.findAll({
       include: [
-        { model: User, attributes: ["id", "name", "profile_pic"] , as: "Sender", attributes: ["id", "name"] },
-        { model: User,attributes: ["id", "name", "profile_pic"] , as: "Receiver", attributes: ["id", "name"] },
+        {
+          model: User,
+          attributes: ["id", "name", "profile_pic"],
+          as: "Sender",
+          attributes: ["id", "name"],
+        },
+        {
+          model: User,
+          attributes: ["id", "name", "profile_pic"],
+          as: "Receiver",
+          attributes: ["id", "name"],
+        },
       ],
     });
     res.json(connections);
@@ -94,7 +104,7 @@ router.get("/user/:id/accepted", auth, async (req, res) => {
     const count = await Connection.count({
       where: {
         status: "accepted",
-        [Op.or]: [{ sender_id: userId }, { reciever_id: userId }],
+        [Op.or]: [{ sender_id: userId }, { receiver_id: userId }],
       },
     });
     res.json({ count });
@@ -115,8 +125,8 @@ router.get("/status/:user1/:user2", async (req, res) => {
     const connection = await Connection.findOne({
       where: {
         [Op.or]: [
-          { sender_id: user1, reciever_id: user2 },
-          { sender_id: user2, reciever_id: user1 },
+          { sender_id: user1, receiver_id: user2 },
+          { sender_id: user2, receiver_id: user1 },
         ],
       },
     });
@@ -143,7 +153,7 @@ router.get("/user/:id", auth, async (req, res) => {
 
     const connections = await Connection.findAll({
       where: {
-        [Op.or]: [{ sender_id: userId }, { reciever_id: userId }],
+        [Op.or]: [{ sender_id: userId }, { receiver_id: userId }],
       },
       include: [
         {
@@ -195,8 +205,8 @@ router.get("/between/:user1/:user2", async (req, res) => {
     const connection = await Connection.findOne({
       where: {
         [Op.or]: [
-          { sender_id: user1, reciever_id: user2 },
-          { sender_id: user2, reciever_id: user1 },
+          { sender_id: user1, receiver_id: user2 },
+          { sender_id: user2, receiver_id: user1 },
         ],
       },
     });
@@ -224,7 +234,7 @@ router.delete("/:id", auth, async (req, res) => {
     // Optional: Check if the current user is involved in the connection
     if (
       connection.sender_id !== req.user.id &&
-      connection.reciever_id !== req.user.id
+      connection.receiver_id !== req.user.id
     ) {
       return res
         .status(403)
