@@ -6,6 +6,14 @@ const { User, UserVerification } = require("../models");
 const sgMail = require("@sendgrid/mail");
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
+function capitalizeWords(str) {
+  return str
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
 router.post("/verify", async (req, res) => {
   const { email, code } = req.body;
 
@@ -70,7 +78,7 @@ router.post("/signup", async (req, res) => {
     if (existing) return res.status(400).json({ error: "Email already used" });
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ email, name, password_hash: hashed });
+    const user = await User.create({ email, name:capitalizeWords(name), password_hash: hashed });
 
     // Generate 4-digit verification code and expiry
     const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();

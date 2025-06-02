@@ -4,9 +4,30 @@ const { Connection, User } = require("../models");
 const auth = require("../middleware/authMiddleware");
 const { Op } = require("sequelize");
 const sendUserNotification = require("../utils/sendUserNotification");
+const sharp = require("sharp");
+const path = require("path");
+const fs = require("fs");
+
+async function generateBlob(profilePicUrl) {
+  if (!profilePicUrl) return null;
+
+  const picFilename = path.basename(profilePicUrl);
+  const picPath = path.join(__dirname, "../uploads", picFilename);
+
+  try {
+    const resizedBuffer = await sharp(picPath)
+      .resize(64, 64)
+      .jpeg({ quality: 60 })
+      .toBuffer();
+
+    return `data:image/jpeg;base64,${resizedBuffer.toString("base64")}`;
+  } catch (err) {
+    console.error("❌ Error resizing image:", err.message);
+    return null;
+  }
+}
 
 // Create new connection request
-
 router.post("/", auth, async (req, res) => {
   try {
     const connection = await Connection.create({
@@ -170,25 +191,32 @@ router.get("/user/:id", auth, async (req, res) => {
     });
 
     const accepted = [];
-    const requests = []; // incoming
+    const requests = [];
     const outgoing = [];
 
     for (const conn of connections) {
-      if (conn.status === "accepted") {
-        accepted.push(conn);
-      } else if (conn.status === "pending") {
-        if (conn.Sender.id != userId) {
-          // someone sent the current user a request
-          requests.push(conn);
+      const connData = conn.toJSON();
+
+      const senderBlob = await generateBlob(connData.Sender.profile_pic);
+      const receiverBlob = await generateBlob(connData.Receiver.profile_pic);
+
+      connData.Sender.profile_pic_blob = senderBlob;
+      connData.Receiver.profile_pic_blob = receiverBlob;
+
+      if (connData.status === "accepted") {
+        accepted.push(connData);
+      } else if (connData.status === "pending") {
+        if (connData.Sender.id !== userId) {
+          requests.push(connData);
         } else {
-          // the current user sent the request
-          outgoing.push(conn);
+          outgoing.push(connData);
         }
       }
     }
 
     res.json({ accepted, requests, outgoing });
   } catch (err) {
+    console.error("❌ Error fetching connections:", err.message);
     res.status(500).json({ error: err.message });
   }
 });

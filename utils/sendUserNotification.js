@@ -7,13 +7,22 @@ async function sendUserNotification({ userId, title, body, type, data = {} }) {
     const user = await User.findByPk(userId);
 
     // Store in DB
-    await Notification.create({
-      user_id: userId,
-      type,
-      message: body,
-      is_read: false,
-      created_at: new Date(),
-    });
+   await Notification.create({
+  user_id: userId,
+  type,
+  message: body,
+  is_read: false,
+  data: stringifiedData,
+  created_at: new Date(),
+});
+
+
+    const stringifiedData = Object.fromEntries(
+      Object.entries({ ...data, notificationType: type }).map(([k, v]) => [
+        k,
+        String(v),
+      ])
+    );
 
     for (const token of tokens) {
       await admin
@@ -21,13 +30,13 @@ async function sendUserNotification({ userId, title, body, type, data = {} }) {
         .send({
           token: token.fcm_token,
           notification: { title, body },
-          data: { ...data, notificationType: type },
+          data: stringifiedData,
         })
-        .then((res) => console.log("📣 Notification sent:", res))
-        .catch((err) => console.error("❌ FCM error:", err));
+        .then((res) => console.log("\n\n📣 Notification sent:", res, "\n"))
+        .catch((err) => console.log("\n\n❌ FCM error:", err, "\n"));
     }
   } catch (err) {
-    console.error("❌ Error sending notification:", err.message);
+    console.log("\n\n❌ Error sending notification:", err.message, "\n");
   }
 }
 

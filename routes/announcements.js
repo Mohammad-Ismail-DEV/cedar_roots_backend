@@ -70,7 +70,7 @@ router.post("/", auth, async (req, res) => {
 });
 
 // Get all announcements for an event
-router.get("/:event_id", auth, async (req, res) => {
+router.get("/:event_id", async (req, res) => {
   try {
     const list = await Announcement.findAll({
       where: { event_id: req.params.event_id },

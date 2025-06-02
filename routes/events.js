@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { Op } = require("sequelize");
+const sharp = require("sharp");
+const fs = require("fs");
+const path = require("path");
 
 const {
   Event,
@@ -9,6 +11,7 @@ const {
   Organization,
   OrganizationMember,
   OrganizationFollower,
+  Sequelize,
 } = require("../models");
 
 const auth = require("../middleware/authMiddleware");
@@ -153,15 +156,44 @@ router.get("/", async (req, res) => {
       orgIds = follows.map((f) => f.organization_id);
     }
 
-    const whereCondition = !isNaN(userId)
-      ? { organization_id: { [Op.in]: orgIds } }
-      : {};
-
     const events = await Event.findAll({
-      where: whereCondition,
       include: [{ model: Organization, attributes: ["id", "name", "logo"] }],
-      order: [["created_at", "DESC"]],
+      order: [
+        [
+          Sequelize.literal(
+            orgIds.length > 0
+              ? `CASE WHEN \`Event\`.\`organization_id\` IN (${orgIds.join(
+                  ","
+                )}) THEN 0 ELSE 1 END`
+              : `1`
+          ),
+          "ASC",
+        ],
+        ["created_at", "DESC"],
+      ],
     });
+
+    for (const event of events) {
+      const org = event.Organization;
+      if (org && org.logo) {
+        const filename = path.basename(org.logo);
+        const filePath = path.join(__dirname, "../uploads", filename);
+        try {
+          const resizedBuffer = await sharp(filePath)
+            .resize(64, 64) // Resize to a small avatar size
+            .jpeg({ quality: 60 })
+            .toBuffer();
+          org.dataValues.logo_blob = `data:image/jpeg;base64,${resizedBuffer.toString(
+            "base64"
+          )}`;
+        } catch (err) {
+          console.error("Error generating logo_blob:", err);
+          org.dataValues.logo_blob = null;
+        }
+      } else if (org) {
+        org.dataValues.logo_blob = null;
+      }
+    }
 
     res.json(events);
   } catch (err) {
@@ -177,6 +209,25 @@ router.get("/:id", async (req, res) => {
     });
 
     if (!event) return res.status(404).json({ error: "Event not found" });
+    const org = event.Organization;
+    if (org && org.logo) {
+      const filename = path.basename(org.logo);
+      const filePath = path.join(__dirname, "../uploads", filename);
+      try {
+        const resizedBuffer = await sharp(filePath)
+          .resize(64, 64)
+          .jpeg({ quality: 60 })
+          .toBuffer();
+        org.dataValues.logo_blob = `data:image/jpeg;base64,${resizedBuffer.toString(
+          "base64"
+        )}`;
+      } catch (err) {
+        console.error("Error generating logo_blob:", err);
+        org.dataValues.logo_blob = null;
+      }
+    } else if (org) {
+      org.dataValues.logo_blob = null;
+    }
     res.json(event);
   } catch (err) {
     res.status(500).json({ error: err.message });

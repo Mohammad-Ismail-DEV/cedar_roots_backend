@@ -1,8 +1,19 @@
 const express = require("express");
 const router = express.Router();
-const { Post, User, Comment, Like, Connection } = require("../models");
+const {
+  Post,
+  User,
+  Comment,
+  Like,
+  Connection,
+  Sequelize,
+} = require("../models");
 const auth = require("../middleware/authMiddleware");
 const { Op } = require("sequelize");
+const fs = require("fs");
+const path = require("path");
+const sharp = require("sharp");
+const sendUserNotification = require("../utils/sendUserNotification");
 
 router.post("/", auth, async (req, res) => {
   try {
@@ -24,6 +35,7 @@ router.get("/", async (req, res) => {
 
   try {
     let connections = [];
+
     if (!isNaN(userId)) {
       const accepted = await Connection.findAll({
         where: {
@@ -37,15 +49,7 @@ router.get("/", async (req, res) => {
       );
     }
 
-    const whereCondition =
-      !isNaN(userId) && connections.length > 0
-        ? { user_id: { [Op.in]: connections } }
-        : !isNaN(userId)
-        ? { user_id: -1 } // empty match instead of crash
-        : {};
-
     const posts = await Post.findAll({
-      where: whereCondition,
       include: [
         { model: User, attributes: ["id", "name", "profile_pic"] },
         {
@@ -71,8 +75,44 @@ router.get("/", async (req, res) => {
           ],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [
+        [
+          Sequelize.literal(
+            connections.length > 0
+              ? `CASE WHEN \`Post\`.\`user_id\` IN (${connections.join(
+                  ","
+                )}) THEN 0 ELSE 1 END`
+              : `1`
+          ),
+          "ASC",
+        ],
+        ["created_at", "DESC"],
+      ],
     });
+    for (const post of posts) {
+      // 🔹 2. Handle author's profile picture as a small base64 blob
+      const profilePicUrl = post.User?.profile_pic;
+      if (profilePicUrl) {
+        const picFilename = path.basename(profilePicUrl);
+        const picPath = path.join(__dirname, "../uploads", picFilename);
+
+        try {
+          const resizedBuffer = await sharp(picPath)
+            .resize(64, 64) // reduce to small square avatar
+            .jpeg({ quality: 60 })
+            .toBuffer();
+
+          post.User.dataValues.profile_pic_blob = `data:image/jpeg;base64,${resizedBuffer.toString(
+            "base64"
+          )}`;
+        } catch (e) {
+          console.error("Error reading profile pic:", e);
+          post.User.dataValues.profile_pic_blob = null;
+        }
+      } else {
+        post.User.dataValues.profile_pic_blob = null;
+      }
+    }
 
     res.json(posts);
   } catch (err) {
@@ -106,6 +146,27 @@ router.get("/:id", async (req, res) => {
     });
 
     if (!post) return res.status(404).json({ error: "Post not found" });
+    const profilePicUrl = post.User?.profile_pic;
+    if (profilePicUrl) {
+      const picFilename = path.basename(profilePicUrl);
+      const picPath = path.join(__dirname, "../uploads", picFilename);
+
+      try {
+        const resizedBuffer = await sharp(picPath)
+          .resize(64, 64) // reduce to small square avatar
+          .jpeg({ quality: 60 })
+          .toBuffer();
+
+        post.User.dataValues.profile_pic_blob = `data:image/jpeg;base64,${resizedBuffer.toString(
+          "base64"
+        )}`;
+      } catch (e) {
+        console.error("Error reading profile pic:", e);
+        post.User.dataValues.profile_pic_blob = null;
+      }
+    } else {
+      post.User.dataValues.profile_pic_blob = null;
+    }
     res.json(post);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -149,24 +210,64 @@ router.post("/:postId/like", auth, async (req, res) => {
       await Like.create({ post_id: postId, user_id: userId });
 
       if (post.user_id !== userId) {
-        await sendUserNotification({
-          userId: post.user_id,
-          title: "New Like",
-          body: `${user.name} liked your post.`,
-          type: "like",
-          data: {
-            postId: post.id,
-            senderId: user.id,
-            senderName: user.name,
-          },
-        });
+        try {
+          await sendUserNotification({
+            userId: post.user_id,
+            title: "New Like",
+            body: `${user.name} liked your post.`,
+            type: "like",
+            data: {
+              postId: post.id,
+              senderId: user.id,
+              senderName: user.name,
+            },
+          });
+        } catch (notificationError) {
+          console.error(
+            "\n\n🔔 Failed to send notification:",
+            notificationError,
+            "\n"
+          );
+          // Optional: You might decide not to throw here, so the like still succeeds
+        }
       }
 
       return res.json({ liked: true, message: "Post liked" });
     }
   } catch (err) {
     console.error("❌ Error toggling like:", err);
-    return res.status(500).json({ error: "Failed to toggle like" });
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ✅ Update a post (content or image)
+router.put("/:id", auth, async (req, res) => {
+  const postId = parseInt(req.params.id);
+  const userId = req.user.id;
+  const { content, image_url } = req.body;
+
+  try {
+    const post = await Post.findOne({
+      where: {
+        id: postId,
+        user_id: userId, // Ensure the user owns the post
+      },
+    });
+
+    if (!post) {
+      return res.status(404).json({ error: "Post not found or unauthorized" });
+    }
+
+    post.content = content ?? post.content;
+    post.image_url = image_url ?? post.image_url;
+    post.updated_at = new Date();
+
+    await post.save();
+
+    res.json({ message: "Post updated successfully", post });
+  } catch (err) {
+    console.error("❌ Error updating post:", err);
+    res.status(500).json({ error: "Failed to update post" });
   }
 });
 

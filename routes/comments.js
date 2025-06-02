@@ -4,7 +4,6 @@ const { Comment, User, Post } = require("../models"); // Make sure Like is impor
 const auth = require("../middleware/authMiddleware");
 const sendUserNotification = require("../utils/sendUserNotification");
 
-
 // ✅ Create a Comment & Notify Post Owner
 router.post("/", auth, async (req, res) => {
   try {
@@ -38,21 +37,25 @@ router.post("/", auth, async (req, res) => {
   }
 });
 
-
 // ✅ Get Comments for a Post
 router.get("/post/:postId", async (req, res) => {
   try {
     const comments = await Comment.findAll({
       where: { post_id: req.params.postId },
-      include: { model: User, attributes: ["id", "name", "profile_pic"] },
+      include: {
+        model: User,
+        as: "Author", // ✅ match alias defined in the model
+        attributes: ["id", "name", "profile_pic"],
+      },
       order: [["created_at", "ASC"]],
     });
+
     res.json(comments);
   } catch (err) {
+    console.error("❌ Error fetching comments:", err);
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // ✅ Delete a Comment
 router.delete("/:id", auth, async (req, res) => {
@@ -65,8 +68,16 @@ router.delete("/:id", auth, async (req, res) => {
       return res.status(404).json({ error: "Comment not found" });
     }
 
+    const post = await Post.findByPk(comment.post_id);
+
+    if (!post) {
+      return res.status(404).json({ error: "Related post not found" });
+    }
+
     const userId = req.user.id;
-    if (comment.user_id !== userId) {
+
+    // Allow deletion if user is comment author or post owner
+    if (comment.user_id !== userId && post.user_id !== userId) {
       return res.status(403).json({ error: "Not authorized" });
     }
 
@@ -74,9 +85,8 @@ router.delete("/:id", auth, async (req, res) => {
     res.json({ message: "Comment deleted" });
   } catch (err) {
     console.error("❌ Error deleting comment:", err);
-    res.status(500).json({ error: "Failed to delete comment" });
+    res.status(500).json({ error: err.message });
   }
 });
-
 
 module.exports = router;
