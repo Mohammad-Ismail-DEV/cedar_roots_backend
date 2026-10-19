@@ -14,7 +14,9 @@ const conversationWith = (a, b) => ({
   ],
 });
 
-async function send({ senderId, receiverId, content, type = "text" }) {
+// `onSaved` runs after the message is stored but before the receiver is told, so a sender
+// always learns the real id before any delivered/seen receipt can come back.
+async function send({ senderId, receiverId, content, type = "text", onSaved }) {
   const [sender, receiver] = await Promise.all([
     User.findByPk(senderId),
     User.findByPk(receiverId),
@@ -30,6 +32,7 @@ async function send({ senderId, receiverId, content, type = "text" }) {
     read_status: STATUS.SENT,
   });
 
+  onSaved?.(message);
   realtime.emitToUser(receiverId, "receive_message", message);
 
   push

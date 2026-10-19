@@ -618,6 +618,25 @@ async function run() {
   sb.emit("send_message", { receiverId: A.id, content: "", local_id: 7 });
   check("socket: invalid payload rejected", (await badP)?.local_id === 7);
 
+  // rapid sends must be stored in the order they were emitted
+  for (let i = 1; i <= 12; i++) {
+    sa.emit("send_message", { receiverId: B.id, content: `order ${i}`, local_id: 5000 + i });
+  }
+  await wait(1500);
+  const ordered = await db.Message.findAll({
+    where: {
+      sender_id: A.id,
+      receiver_id: B.id,
+      content: { [require("sequelize").Op.like]: "order %" },
+    },
+    order: [["id", "ASC"]],
+  });
+  check(
+    "socket: 12 rapid messages are stored in send order",
+    ordered.length === 12 && ordered.every((m, i) => m.content === `order ${i + 1}`),
+    JSON.stringify(ordered.map((m) => m.content))
+  );
+
   // bad token handshake
   const sbad = io(BASE, {
     transports: ["websocket"],

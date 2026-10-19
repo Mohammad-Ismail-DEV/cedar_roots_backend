@@ -10,16 +10,17 @@ module.exports = function chat(socket) {
     "send_message",
     v.socketSend,
     async (data) => {
-      const message = await messageService.send({
+      await messageService.send({
         senderId: actingUserId(socket, data.senderId),
         receiverId: data.receiverId,
         content: data.content,
         type: data.type,
-      });
-      socket.emit("message_saved", {
-        messageId: message.id,
-        local_id: data.local_id,
-        status: "saved",
+        onSaved: (message) =>
+          socket.emit("message_saved", {
+            messageId: message.id,
+            local_id: data.local_id,
+            status: "saved",
+          }),
       });
     },
     (error, payload) => socket.emit("message_failed", { local_id: payload?.local_id, error })
