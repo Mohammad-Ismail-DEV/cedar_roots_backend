@@ -4,7 +4,12 @@ const bcrypt = require("bcryptjs");
 
 jest.mock("../src/models", () => ({
   User: { findOne: jest.fn(), create: jest.fn() },
-  UserVerification: { create: jest.fn(), findOne: jest.fn(), update: jest.fn() },
+  UserVerification: {
+    create: jest.fn(),
+    findOne: jest.fn(),
+    update: jest.fn(),
+    destroy: jest.fn(),
+  },
 }));
 jest.mock("../src/services/email", () => ({ sendEmail: jest.fn() }));
 
@@ -12,6 +17,7 @@ const { User, UserVerification } = require("../src/models");
 const { sendEmail } = require("../src/services/email");
 const app = require("../src/app");
 const env = require("../src/config/env");
+const AppError = require("../src/utils/AppError");
 
 const tokenFor = (id) => jwt.sign({ id }, env.jwt.secret);
 
@@ -82,6 +88,24 @@ describe("auth flow", () => {
     expect(res.body.token).toBeUndefined();
     expect(JSON.stringify(res.body)).not.toMatch(/password/);
     expect(res.body.user).toMatchObject({ id: 7, email: "a@example.com", name: "Ada Lovelace" });
+  });
+
+  test("when the verification email fails, signup is undone and the error is clear", async () => {
+    const destroy = jest.fn();
+    User.findOne.mockResolvedValue(null);
+    User.create.mockImplementation(async (fields) => ({ id: 9, destroy, ...fields }));
+    sendEmail.mockRejectedValueOnce(
+      new AppError(502, "We couldn't send the verification email. Please try again later.")
+    );
+
+    const res = await request(app)
+      .post("/auth/signup")
+      .send({ email: "new@example.com", password: "secret123", name: "New Person" });
+
+    expect(res.status).toBe(502);
+    expect(res.body.error).toMatch(/couldn't send the verification email/);
+    expect(destroy).toHaveBeenCalled();
+    expect(UserVerification.destroy).toHaveBeenCalledWith({ where: { user_id: 9 } });
   });
 
   test("login gives the same 401 for unknown email and wrong password", async () => {

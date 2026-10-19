@@ -1,4 +1,5 @@
 const logger = require("../utils/logger");
+const AppError = require("../utils/AppError");
 
 function notFoundHandler(req, res) {
   res.status(404).json({ error: "Route not found", message: "Route not found" });
@@ -12,6 +13,12 @@ function send(res, status, error) {
 // eslint-disable-next-line no-unused-vars
 function errorHandler(err, req, res, next) {
   if (err.status && err.status < 500) return send(res, err.status, err.message);
+
+  // Deliberate server-side failures (e.g. email provider down) carry a user-safe message.
+  if (err instanceof AppError) {
+    logger.error({ err, path: req.path, method: req.method }, err.message);
+    return send(res, err.status, err.message);
+  }
 
   if (err.name === "SequelizeUniqueConstraintError") {
     return send(res, 409, "Resource already exists");

@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const { User, UserVerification } = require("../models");
 const env = require("../config/env");
 const AppError = require("../utils/AppError");
+const logger = require("../utils/logger");
 const { sendEmail } = require("./email");
 
 const CODE_TTL_MS = 10 * 60 * 1000;
@@ -46,6 +47,10 @@ async function issueVerificationCode(user) {
     status: "pending",
   });
 
+  if (env.emailMode === "console") {
+    logger.warn({ email: user.email, code }, "EMAIL_MODE=console: verification code (not emailed)");
+  }
+
   await sendEmail(
     user.email,
     "Your Cedar Roots Verification Code",
@@ -71,7 +76,14 @@ async function signup({ email, password, name }) {
     updated_at: new Date(),
   });
 
-  await issueVerificationCode(user);
+  try {
+    await issueVerificationCode(user);
+  } catch (err) {
+    // No half-created account: the user can simply try again.
+    await UserVerification.destroy({ where: { user_id: user.id } });
+    await user.destroy();
+    throw err;
+  }
 
   return { user: publicUser(user), message: "User created. Verification code sent to email." };
 }

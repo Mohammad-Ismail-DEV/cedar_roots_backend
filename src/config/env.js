@@ -25,9 +25,12 @@ module.exports = {
     host: process.env.DB_HOST || "127.0.0.1",
     dialect: "mysql",
   },
-  sendgrid: {
-    apiKey: process.env.SENDGRID_API_KEY,
-    fromEmail: process.env.SENDGRID_VERIFIED_EMAIL,
+  // "console" prints verification codes in the server log instead of emailing them (dev only).
+  emailMode: process.env.EMAIL_MODE === "console" ? "console" : "smtp",
+  // Gmail account used to send verification emails. Use an App Password, not the account password.
+  email: {
+    user: process.env.GMAIL_USER,
+    password: process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, ""),
   },
   firebaseServiceAccountPath:
     process.env.FIREBASE_SERVICE_ACCOUNT ||
