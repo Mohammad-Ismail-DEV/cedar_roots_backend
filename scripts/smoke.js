@@ -326,6 +326,12 @@ async function run() {
       ).length === 1
   );
   check(
+    "C leaves the event, and leaving again is a 404",
+    (await api("DELETE", `/events/${ev.body.id}/leave`, { token: tc })).status === 200 &&
+      (await api("DELETE", `/events/${ev.body.id}/leave`, { token: tc })).status === 404
+  );
+  await api("POST", `/events/${ev.body.id}/join`, { token: tc });
+  check(
     "member B cannot announce",
     (
       await api("POST", "/announcements", {

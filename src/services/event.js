@@ -93,6 +93,11 @@ async function join(userId, eventId) {
   return participation;
 }
 
+async function leave(userId, eventId) {
+  const left = await EventParticipant.destroy({ where: { event_id: eventId, user_id: userId } });
+  if (!left) throw AppError.notFound("You are not part of this event");
+}
+
 // Events from organizations the user follows come first, newest first within each group.
 async function list({ userId }) {
   const followedOrgIds = new Set(userId ? await followedOrganizationIds(userId) : []);
@@ -146,4 +151,4 @@ async function listParticipants(eventId) {
   });
 }
 
-module.exports = { create, join, list, getById, update, remove, listParticipants };
+module.exports = { create, join, leave, list, getById, update, remove, listParticipants };

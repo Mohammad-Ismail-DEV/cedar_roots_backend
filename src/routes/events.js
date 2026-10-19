@@ -8,6 +8,7 @@ const c = require("../controllers/event");
 router.post("/", auth, validate({ body: v.create }), c.create);
 router.get("/", validate({ query: v.listQuery }), c.list);
 router.post("/:id/join", auth, validate({ params: idParams }), c.join);
+router.delete("/:id/leave", auth, validate({ params: idParams }), c.leave);
 router.get("/:id", validate({ params: idParams }), c.getById);
 router.put("/:id", auth, validate({ params: idParams, body: v.update }), c.update);
 router.delete("/:id", auth, validate({ params: idParams }), c.remove);
