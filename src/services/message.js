@@ -52,7 +52,10 @@ async function send({ senderId, receiverId, content, type = "text" }) {
 async function history({ userId, otherUserId, page, limit }) {
   const messages = await Message.findAll({
     where: conversationWith(userId, otherUserId),
-    order: [["sent_at", "DESC"]],
+    order: [
+      ["sent_at", "DESC"],
+      ["id", "DESC"],
+    ],
     offset: (page - 1) * limit,
     limit,
   });
@@ -67,7 +70,10 @@ async function conversations(userId) {
       { model: User, as: "sender", attributes: ["id", "name", "profile_pic"] },
       { model: User, as: "receiver", attributes: ["id", "name", "profile_pic"] },
     ],
-    order: [["sent_at", "DESC"]],
+    order: [
+      ["sent_at", "DESC"],
+      ["id", "DESC"],
+    ],
   });
 
   const byPartner = new Map();
@@ -127,7 +133,10 @@ async function listForUser(userId) {
       { model: User, as: "sender", attributes: ["id", "name"] },
       { model: User, as: "receiver", attributes: ["id", "name"] },
     ],
-    order: [["sent_at", "DESC"]],
+    order: [
+      ["sent_at", "DESC"],
+      ["id", "DESC"],
+    ],
     limit: 200,
   });
 }
