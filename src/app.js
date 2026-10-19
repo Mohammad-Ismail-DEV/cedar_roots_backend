@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const env = require("./config/env");
 const routes = require("./routes");
+const { imageVariants } = require("./middleware/imageVariants");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 
 const app = express();
@@ -16,7 +17,12 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] }));
 app.use(express.json({ limit: "1mb" }));
 
-app.use("/uploads", express.static(env.uploadsDir));
+// File names are unique per upload, so browsers/apps may cache them forever.
+app.use(
+  "/uploads",
+  imageVariants,
+  express.static(env.uploadsDir, { maxAge: "365d", immutable: true })
+);
 app.use(routes);
 
 app.use(notFoundHandler);
