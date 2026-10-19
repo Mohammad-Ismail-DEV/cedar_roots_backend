@@ -14,8 +14,12 @@ exports.respond = async (req, res) =>
 exports.list = async (req, res) => res.json(await connectionService.listForUser(req.user.id));
 exports.countAccepted = async (req, res) =>
   res.json({ count: await connectionService.countAccepted(req.valid.params.id) });
-exports.groupedForUser = async (req, res) =>
-  res.json(await connectionService.groupedForUser(req.valid.params.id));
+// Pending requests are private: other users only see accepted connections.
+exports.groupedForUser = async (req, res) => {
+  const userId = req.valid.params.id;
+  const grouped = await connectionService.groupedForUser(userId);
+  res.json(userId === req.user.id ? grouped : { ...grouped, requests: [], outgoing: [] });
+};
 exports.status = async (req, res) => {
   const { user1, user2 } = req.valid.params;
   assertInvolved(req, user1, user2);

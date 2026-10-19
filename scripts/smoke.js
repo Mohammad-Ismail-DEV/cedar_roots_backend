@@ -386,6 +386,12 @@ async function run() {
       "profile_pic_blob" in grouped.body.requests[0].Sender,
     JSON.stringify(grouped.body).slice(0, 200)
   );
+  const peek = await api("GET", `/connections/user/${B.id}`, { token: tc });
+  check(
+    "other users cannot see someone's pending requests",
+    peek.status === 200 && peek.body.requests.length === 0 && peek.body.outgoing.length === 0,
+    JSON.stringify(peek.body).slice(0, 150)
+  );
   check(
     "status pending_received",
     (await api("GET", `/connections/status/${B.id}/${A.id}`, { token: tb })).body?.status ===
