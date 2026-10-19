@@ -158,6 +158,14 @@ async function run() {
     "feed lists posts with User",
     feed.status === 200 && Array.isArray(feed.body) && feed.body.some((p) => p.id === postId)
   );
+  const byAuthor = await api("GET", `/posts?author_id=${A.id}`);
+  check(
+    "posts can be filtered by author",
+    byAuthor.status === 200 &&
+      byAuthor.body.length > 0 &&
+      byAuthor.body.every((p) => p.user_id === A.id),
+    JSON.stringify(byAuthor.body).slice(0, 150)
+  );
   check("get post by id", (await api("GET", `/posts/${postId}`)).status === 200);
   const like = await api("POST", `/posts/${postId}/like`, { token: tb });
   check("like toggles on", like.status === 200 && like.body.liked === true, JSON.stringify(like));

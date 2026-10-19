@@ -1,7 +1,7 @@
 const { z, id, text, optionalText } = require("./common");
 
 module.exports = {
-  listQuery: z.object({ user_id: id.optional() }),
+  listQuery: z.object({ user_id: id.optional(), author_id: id.optional() }),
   create: z.object({
     content: z.string().trim().max(5000).default(""),
     image_url: optionalText(500),

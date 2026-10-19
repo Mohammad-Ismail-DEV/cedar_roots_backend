@@ -4,7 +4,12 @@ const likeService = require("../services/like");
 
 exports.create = async (req, res) => res.json(await postService.create(req.user.id, req.body));
 exports.list = async (req, res) =>
-  res.json(await postService.list({ userId: req.valid.query.user_id }));
+  res.json(
+    await postService.list({
+      userId: req.valid.query.user_id,
+      authorId: req.valid.query.author_id,
+    })
+  );
 exports.getById = async (req, res) => res.json(await postService.getById(req.valid.params.id));
 exports.update = async (req, res) =>
   res.json({

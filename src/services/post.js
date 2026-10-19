@@ -46,10 +46,11 @@ async function create(userId, { content, image_url }) {
 }
 
 // Posts from the user's connections come first, newest first within each group.
-async function list({ userId }) {
+async function list({ userId, authorId }) {
   const connected = new Set(userId ? await connectedUserIds(userId) : []);
 
   const posts = await Post.findAll({
+    where: authorId ? { user_id: authorId } : undefined,
     include: postInclude,
     order: [["created_at", "DESC"]],
   });
