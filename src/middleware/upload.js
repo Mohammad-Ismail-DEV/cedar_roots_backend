@@ -11,7 +11,8 @@ const ALLOWED = {
   ".webp": "image/webp",
   ".gif": "image/gif",
 };
-const MAX_BYTES = 8 * 1024 * 1024;
+// Photos are stored exactly as uploaded (no recompression), so leave room for full-resolution shots.
+const MAX_BYTES = 30 * 1024 * 1024;
 
 fs.mkdirSync(env.uploadsDir, { recursive: true });
 

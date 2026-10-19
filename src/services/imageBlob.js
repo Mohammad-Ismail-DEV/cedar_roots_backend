@@ -12,7 +12,7 @@ function remember(key, value) {
   cache.set(key, value);
 }
 
-// Returns a 64x64 base64 JPEG data URI for an uploaded image URL, or null.
+// Returns a 256x256 base64 JPEG data URI for an uploaded image URL, or null.
 async function getBlob(imageUrl) {
   if (!imageUrl) return null;
 
@@ -22,7 +22,7 @@ async function getBlob(imageUrl) {
     const key = `${filePath}:${mtimeMs}`;
     if (cache.has(key)) return cache.get(key);
 
-    const buffer = await sharp(filePath).resize(64, 64).jpeg({ quality: 60 }).toBuffer();
+    const buffer = await sharp(filePath).resize(256, 256).jpeg({ quality: 70 }).toBuffer();
     const blob = `data:image/jpeg;base64,${buffer.toString("base64")}`;
     remember(key, blob);
     return blob;

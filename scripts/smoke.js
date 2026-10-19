@@ -497,6 +497,26 @@ async function run() {
     fs.unlinkSync(`${BACKEND}/uploads/${file}`);
   }
 
+  // a full-resolution phone photo (well over the old 8 MB cap) is stored untouched
+  const big = Buffer.alloc(12 * 1024 * 1024, 7);
+  const bigForm = new FormData();
+  bigForm.append("file", new Blob([big], { type: "image/jpeg" }), "full-res.jpg");
+  const bigUp = await api("POST", "/upload", { token: ta, form: bigForm });
+  check(
+    "upload accepts a 12 MB full-resolution photo",
+    bigUp.status === 200,
+    JSON.stringify(bigUp)
+  );
+  if (bigUp.body?.url) {
+    const fs = require("fs");
+    const file = bigUp.body.url.split("/uploads/")[1];
+    check(
+      "the stored photo is byte-for-byte what was sent",
+      fs.statSync(`${BACKEND}/uploads/${file}`).size === big.length
+    );
+    fs.unlinkSync(`${BACKEND}/uploads/${file}`);
+  }
+
   // ---- messages REST
   const mrest = await api("POST", "/messages", {
     token: ta,
