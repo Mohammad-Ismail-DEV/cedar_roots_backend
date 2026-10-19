@@ -73,7 +73,8 @@ async function loadOwned(userId, id) {
 async function update(userId, id, { content, image_url }) {
   const post = await loadOwned(userId, id);
   post.content = content ?? post.content;
-  post.image_url = image_url ?? post.image_url;
+  // null means "remove the image"; undefined means "leave it alone".
+  if (image_url !== undefined) post.image_url = image_url;
   post.updated_at = new Date();
   await post.save();
   return post;

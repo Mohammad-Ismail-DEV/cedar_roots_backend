@@ -184,6 +184,28 @@ async function run() {
       (await api("DELETE", `/comments/${comment.body.id}`, { token: ta })).status === 200
   );
 
+  const withImage = await api("POST", "/posts", {
+    token: ta,
+    body: { content: "pic", image_url: "http://x/y.png" },
+  });
+  const cleared = await api("PUT", `/posts/${withImage.body.id}`, {
+    token: ta,
+    body: { content: "pic", image_url: null },
+  });
+  check(
+    "editing a post can remove its image",
+    cleared.status === 200 && cleared.body.post.image_url === null,
+    JSON.stringify(cleared)
+  );
+  const kept = await api("PUT", `/posts/${withImage.body.id}`, {
+    token: ta,
+    body: { content: "edited" },
+  });
+  check(
+    "omitting image_url leaves it untouched",
+    kept.status === 200 && kept.body.post.content === "edited"
+  );
+
   // ---- organizations
   const org = await api("POST", "/organizations", {
     token: ta,
