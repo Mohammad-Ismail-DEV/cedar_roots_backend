@@ -38,12 +38,13 @@ async function listForUser(userId) {
 }
 
 async function getById(id) {
-  const userAttrs = { model: User, attributes: ["id", "name", "profile_pic"] };
+  // Sequelize mutates include objects, so each include needs its own copy.
+  const userInclude = () => ({ model: User, attributes: ["id", "name", "profile_pic"] });
   const organization = await Organization.findByPk(id, {
     include: [
       { model: Event },
-      { model: OrganizationFollower, include: [userAttrs] },
-      { model: OrganizationMember, include: [userAttrs] },
+      { model: OrganizationFollower, include: [userInclude()] },
+      { model: OrganizationMember, include: [userInclude()] },
     ],
   });
   if (!organization) throw AppError.notFound("Organization not found");
