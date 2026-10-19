@@ -9,9 +9,9 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 function capitalizeWords(str) {
   return str
     .toLowerCase()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 router.post("/verify", async (req, res) => {
@@ -59,7 +59,7 @@ router.post("/verify", async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        createdAt: user.createdAt,
+        created_at: user.created_at,
       },
     });
   } catch (error) {
@@ -78,7 +78,11 @@ router.post("/signup", async (req, res) => {
     if (existing) return res.status(400).json({ error: "Email already used" });
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({ email, name:capitalizeWords(name), password_hash: hashed });
+    const user = await User.create({
+      email,
+      name: capitalizeWords(name),
+      password_hash: hashed,
+    });
 
     // Generate 4-digit verification code and expiry
     const verificationCode = Math.floor(1000 + Math.random() * 9000).toString();
@@ -103,7 +107,7 @@ router.post("/signup", async (req, res) => {
         <p>If you didn’t request this, please ignore this email.</p>
         <br/>
         <p>— The Cedar Roots Team</p>
-      `
+      `,
     );
 
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET);

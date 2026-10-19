@@ -1,10 +1,10 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const { Notification } = require('../models');
-const auth = require('../middleware/authMiddleware');
+const { Notification } = require("../models");
+const auth = require("../middleware/authMiddleware");
 
 // Get all notifications for logged in user
-router.get("/notifications", auth, async (req, res) => {
+router.get("/", auth, async (req, res) => {
   try {
     const notifications = await Notification.findAll({
       where: { user_id: req.user.id },
@@ -17,13 +17,14 @@ router.get("/notifications", auth, async (req, res) => {
   }
 });
 
-
 // Mark a notification as read
-router.put('/:id/read', auth, async (req, res) => {
+router.put("/:id/read", auth, async (req, res) => {
   try {
     const notification = await Notification.findByPk(req.params.id);
     if (!notification || notification.user_id !== req.user.id) {
-      return res.status(403).json({ error: 'Not authorized or notification not found' });
+      return res
+        .status(403)
+        .json({ error: "Not authorized or notification not found" });
     }
     notification.is_read = true;
     await notification.save();
@@ -34,11 +35,14 @@ router.put('/:id/read', auth, async (req, res) => {
 });
 
 // Delete a notification
-router.delete('/:id', auth, async (req, res) => {
+router.delete("/:id", auth, async (req, res) => {
   try {
-    const deleted = await Notification.destroy({ where: { id: req.params.id, user_id: req.user.id } });
-    if (!deleted) return res.status(404).json({ error: 'Notification not found' });
-    res.json({ message: 'Notification deleted' });
+    const deleted = await Notification.destroy({
+      where: { id: req.params.id, user_id: req.user.id },
+    });
+    if (!deleted)
+      return res.status(404).json({ error: "Notification not found" });
+    res.json({ message: "Notification deleted" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
