@@ -444,7 +444,7 @@ async function run() {
   });
   check(
     "upload returns an https url behind a proxy",
-    up.status === 200 && /\/uploads\/.+\.png$/.test(up.body?.url),
+    up.status === 200 && /^https:\/\/.+\/uploads\/.+\.png$/.test(up.body?.url),
     JSON.stringify(up)
   );
   if (up.body?.url) {
