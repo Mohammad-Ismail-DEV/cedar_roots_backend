@@ -7,6 +7,10 @@ const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
 
 const app = express();
 
+// Behind ngrok or a load balancer: honour X-Forwarded-Proto/For so req.protocol is
+// "https" (uploaded file URLs) and rate limiting sees the real client address.
+app.set("trust proxy", 1);
+
 // Uploaded images are loaded cross-origin by the Flutter web build.
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT", "DELETE"] }));

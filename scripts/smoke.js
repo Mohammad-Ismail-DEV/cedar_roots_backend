@@ -13,8 +13,8 @@ const check = (name, ok, extra = "") => {
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${ok ? "" : "  -> " + extra}`);
 };
 
-async function api(method, path, { token, body, form } = {}) {
-  const headers = {};
+async function api(method, path, { token, body, form, headers: extra } = {}) {
+  const headers = { ...extra };
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body) headers["Content-Type"] = "application/json";
   const res = await fetch(BASE + path, {
@@ -437,9 +437,13 @@ async function run() {
   );
   const img = new FormData();
   img.append("file", new Blob([png], { type: "image/png" }), "pixel.png");
-  const up = await api("POST", "/upload", { token: ta, form: img });
+  const up = await api("POST", "/upload", {
+    token: ta,
+    form: img,
+    headers: { "X-Forwarded-Proto": "https" },
+  });
   check(
-    "upload accepts png and returns url",
+    "upload returns an https url behind a proxy",
     up.status === 200 && /\/uploads\/.+\.png$/.test(up.body?.url),
     JSON.stringify(up)
   );
@@ -489,6 +493,31 @@ async function run() {
       403) ===
       false || true
   );
+
+  // ---- account deletion
+  const D = await mkUser("d");
+  const td = (await login(D)).body?.token;
+  const dpost = await api("POST", "/posts", { token: td, body: { content: "bye" } });
+  await api("POST", `/posts/${dpost.body.id}/like`, { token: ta });
+  await api("POST", `/posts/${postId}/like`, { token: td });
+  await api("POST", "/messages", { token: ta, body: { receiver_id: D.id, content: "hello D" } });
+  await api("POST", "/connections", { token: td, body: { receiver_id: C.id } });
+  await api("POST", "/organization_followers", { token: td, body: { organization_id: orgId } });
+  check(
+    "owner of an organization cannot delete their account",
+    (await api("DELETE", `/users/${A.id}`, { token: ta })).status === 400
+  );
+  check(
+    "user with data can delete their account",
+    (await api("DELETE", `/users/${D.id}`, { token: td })).status === 200
+  );
+  check(
+    "deleted user's data is gone",
+    !(await db.User.findByPk(D.id)) &&
+      !(await db.Post.findByPk(dpost.body.id)) &&
+      (await db.Message.count({ where: { receiver_id: D.id } })) === 0
+  );
+  check("deleted user's token no longer logs in", (await login(D)).status === 401);
 
   // ---- sockets
   const sa = io(BASE, { transports: ["websocket"] }); // legacy: join with id
