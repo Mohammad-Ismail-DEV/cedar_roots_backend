@@ -1,6 +1,7 @@
 const { Comment, User, Post } = require("../models");
 const AppError = require("../utils/AppError");
 const { notifyUser } = require("./notification");
+const realtime = require("../sockets/realtime");
 
 async function create(userId, { post_id, content }) {
   const [post, sender] = await Promise.all([Post.findByPk(post_id), User.findByPk(userId)]);
@@ -12,6 +13,7 @@ async function create(userId, { post_id, content }) {
     content,
     created_at: new Date(),
   });
+  realtime.emitToAll("post_changed", { postId: post.id });
 
   if (post.user_id !== userId) {
     await notifyUser({
@@ -45,6 +47,7 @@ async function remove(userId, commentId) {
     throw AppError.forbidden("Not authorized");
   }
   await comment.destroy();
+  realtime.emitToAll("post_changed", { postId: post.id });
 }
 
 module.exports = { create, listForPost, remove };

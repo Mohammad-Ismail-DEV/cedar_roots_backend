@@ -11,4 +11,7 @@ module.exports = {
   emitToUser(userId, event, payload) {
     if (io) io.to(userRoom(userId)).emit(event, payload);
   },
+  emitToAll(event, payload) {
+    if (io) io.emit(event, payload);
+  },
 };

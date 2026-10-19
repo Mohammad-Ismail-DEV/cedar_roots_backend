@@ -1,6 +1,7 @@
 const { Like, Post, User } = require("../models");
 const AppError = require("../utils/AppError");
 const { notifyUser } = require("./notification");
+const realtime = require("../sockets/realtime");
 
 async function toggle(userId, postId) {
   const [post, user] = await Promise.all([Post.findByPk(postId), User.findByPk(userId)]);
@@ -9,10 +10,12 @@ async function toggle(userId, postId) {
   const existing = await Like.findOne({ where: { post_id: postId, user_id: userId } });
   if (existing) {
     await existing.destroy();
+    realtime.emitToAll("post_changed", { postId: post.id });
     return { liked: false, message: "Post unliked" };
   }
 
   await Like.create({ post_id: postId, user_id: userId, created_at: new Date() });
+  realtime.emitToAll("post_changed", { postId: post.id });
 
   if (post.user_id !== userId) {
     await notifyUser({

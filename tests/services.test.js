@@ -10,6 +10,7 @@ jest.mock("../src/models", () => ({
 }));
 jest.mock("../src/sockets/realtime", () => ({
   emitToUser: jest.fn(),
+  emitToAll: jest.fn(),
   userRoom: (id) => `user:${id}`,
 }));
 jest.mock("../src/services/push", () => ({ sendToUser: jest.fn() }));
