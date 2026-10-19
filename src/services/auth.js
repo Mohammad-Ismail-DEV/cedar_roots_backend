@@ -31,6 +31,33 @@ const publicUser = (user) => ({
   created_at: user.created_at,
 });
 
+// Expires any older pending code, stores a new one and emails it.
+async function issueVerificationCode(user) {
+  await UserVerification.update(
+    { status: "expired" },
+    { where: { user_id: user.id, status: "pending" } }
+  );
+
+  const code = crypto.randomInt(1000, 10000).toString();
+  await UserVerification.create({
+    user_id: user.id,
+    verification_code: code,
+    expires_at: new Date(Date.now() + CODE_TTL_MS),
+    status: "pending",
+  });
+
+  await sendEmail(
+    user.email,
+    "Your Cedar Roots Verification Code",
+    `<p>Hi ${escapeHtml(user.name)},</p>
+     <p>Your 4-digit verification code is:</p>
+     <h2>${code}</h2>
+     <p>This code expires in <strong>10 minutes</strong>.</p>
+     <p>If you didn't request this, please ignore this email.</p>
+     <p>— The Cedar Roots Team</p>`
+  );
+}
+
 async function signup({ email, password, name }) {
   if (await User.findOne({ where: { email } })) {
     throw AppError.badRequest("Email already used");
@@ -44,24 +71,7 @@ async function signup({ email, password, name }) {
     updated_at: new Date(),
   });
 
-  const code = crypto.randomInt(1000, 10000).toString();
-  await UserVerification.create({
-    user_id: user.id,
-    verification_code: code,
-    expires_at: new Date(Date.now() + CODE_TTL_MS),
-    status: "pending",
-  });
-
-  await sendEmail(
-    email,
-    "Your Cedar Roots Verification Code",
-    `<p>Hi ${escapeHtml(user.name)},</p>
-     <p>Thanks for signing up! Your 4-digit verification code is:</p>
-     <h2>${code}</h2>
-     <p>This code expires in <strong>10 minutes</strong>.</p>
-     <p>If you didn't request this, please ignore this email.</p>
-     <p>— The Cedar Roots Team</p>`
-  );
+  await issueVerificationCode(user);
 
   return { user: publicUser(user), message: "User created. Verification code sent to email." };
 }
@@ -105,4 +115,16 @@ async function login({ email, password }) {
   return { token: signToken(user.id), user: plain };
 }
 
-module.exports = { signup, verify, login };
+// Same answer whether or not the account exists, so it can't be used to probe emails.
+async function resendCode({ email }) {
+  const user = await User.findOne({ where: { email } });
+  if (user) {
+    const verified = await UserVerification.findOne({
+      where: { user_id: user.id, status: "verified" },
+    });
+    if (!verified) await issueVerificationCode(user);
+  }
+  return { message: "If the account exists and is unverified, a new code was sent." };
+}
+
+module.exports = { signup, verify, login, resendCode };

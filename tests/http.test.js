@@ -4,11 +4,12 @@ const bcrypt = require("bcryptjs");
 
 jest.mock("../src/models", () => ({
   User: { findOne: jest.fn(), create: jest.fn() },
-  UserVerification: { create: jest.fn(), findOne: jest.fn() },
+  UserVerification: { create: jest.fn(), findOne: jest.fn(), update: jest.fn() },
 }));
 jest.mock("../src/services/email", () => ({ sendEmail: jest.fn() }));
 
 const { User, UserVerification } = require("../src/models");
+const { sendEmail } = require("../src/services/email");
 const app = require("../src/app");
 const env = require("../src/config/env");
 
@@ -116,5 +117,39 @@ describe("auth flow", () => {
     expect(res.status).toBe(200);
     expect(res.body.user.password_hash).toBeUndefined();
     expect(jwt.decode(res.body.token).exp).toBeDefined();
+  });
+});
+
+describe("resend verification code", () => {
+  const send = (email) => request(app).post("/auth/resend").send({ email });
+
+  test("sends a fresh code to an unverified account and expires the old one", async () => {
+    User.findOne.mockResolvedValue({ id: 3, email: "a@example.com", name: "Ada" });
+    UserVerification.findOne.mockResolvedValue(null);
+
+    const res = await send("a@example.com");
+
+    expect(res.status).toBe(200);
+    expect(UserVerification.update).toHaveBeenCalledWith(
+      { status: "expired" },
+      { where: { user_id: 3, status: "pending" } }
+    );
+    expect(UserVerification.create).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 3, status: "pending" })
+    );
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  test("answers identically for unknown and already verified accounts, sending nothing", async () => {
+    User.findOne.mockResolvedValueOnce(null);
+    const unknown = await send("ghost@example.com");
+
+    User.findOne.mockResolvedValueOnce({ id: 4, email: "v@example.com", name: "V" });
+    UserVerification.findOne.mockResolvedValueOnce({ status: "verified" });
+    const verified = await send("v@example.com");
+
+    expect(unknown.status).toBe(200);
+    expect(verified.body).toEqual(unknown.body);
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 });

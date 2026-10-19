@@ -9,5 +9,6 @@ module.exports = {
     name: text(100),
   }),
   verify: z.object({ email, code: z.string().regex(/^\d{4}$/, "must be 4 digits") }),
+  resend: z.object({ email }),
   login: z.object({ email, password: z.string().min(1).max(72) }),
 };
