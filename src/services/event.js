@@ -4,6 +4,9 @@ const { attachBlob } = require("./imageBlob");
 const organizationMember = require("./organizationMember");
 const follower = require("./follower");
 const { notifyUser, notifyUsers } = require("./notification");
+const realtime = require("../sockets/realtime");
+
+const announce = (id) => realtime.emitToAll("feed_changed", { kind: "event", id });
 
 const orgInclude = { model: Organization, attributes: ["id", "name", "logo"] };
 
@@ -58,6 +61,7 @@ async function create(actorId, { collaborators, ...fields }) {
     data,
   }));
 
+  announce(event.id);
   return event;
 }
 
@@ -136,12 +140,14 @@ async function loadManageable(actorId, id) {
 async function update(actorId, id, fields) {
   const event = await loadManageable(actorId, id);
   await event.update({ ...fields, updated_at: new Date() });
+  announce(event.id);
   return event;
 }
 
 async function remove(actorId, id) {
   const event = await loadManageable(actorId, id);
   await event.destroy();
+  announce(event.id);
 }
 
 async function listParticipants(eventId) {

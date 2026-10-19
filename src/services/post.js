@@ -2,6 +2,9 @@ const { Op } = require("sequelize");
 const { Post, User, Comment, Like, Connection } = require("../models");
 const AppError = require("../utils/AppError");
 const { attachBlob } = require("./imageBlob");
+const realtime = require("../sockets/realtime");
+
+const announce = (id) => realtime.emitToAll("feed_changed", { kind: "post", id });
 
 const authorAttrs = ["id", "name", "profile_pic"];
 
@@ -36,13 +39,15 @@ async function connectedUserIds(userId) {
 }
 
 async function create(userId, { content, image_url }) {
-  return Post.create({
+  const post = await Post.create({
     user_id: userId,
     content,
     image_url: image_url ?? null,
     created_at: new Date(),
     updated_at: new Date(),
   });
+  announce(post.id);
+  return post;
 }
 
 // Posts from the user's connections come first, newest first within each group.
@@ -78,12 +83,14 @@ async function update(userId, id, { content, image_url }) {
   if (image_url !== undefined) post.image_url = image_url;
   post.updated_at = new Date();
   await post.save();
+  announce(post.id);
   return post;
 }
 
 async function remove(userId, id) {
   const post = await loadOwned(userId, id);
   await post.destroy();
+  announce(post.id);
 }
 
 module.exports = { create, list, getById, update, remove };
