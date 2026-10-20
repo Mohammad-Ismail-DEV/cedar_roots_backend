@@ -116,7 +116,27 @@ async function list({ userId }) {
       Number(!followedOrgIds.has(b.organization_id))
   );
 
-  return Promise.all(events.map(toJsonWithLogo));
+  // How many people joined each event, and whether the caller is one of them.
+  const rows = events.length
+    ? await EventParticipant.findAll({
+        where: { event_id: events.map((e) => e.id) },
+        attributes: ["event_id", "user_id"],
+      })
+    : [];
+  const counts = new Map();
+  const mine = new Set();
+  rows.forEach((r) => {
+    counts.set(r.event_id, (counts.get(r.event_id) || 0) + 1);
+    if (userId && r.user_id === userId) mine.add(r.event_id);
+  });
+
+  return Promise.all(
+    events.map(async (e) => ({
+      ...(await toJsonWithLogo(e)),
+      participant_count: counts.get(e.id) || 0,
+      is_participant: mine.has(e.id),
+    }))
+  );
 }
 
 async function followedOrganizationIds(userId) {
