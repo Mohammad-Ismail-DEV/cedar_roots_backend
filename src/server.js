@@ -5,6 +5,7 @@ const { initFirebase } = require("./config/firebase");
 const db = require("./models");
 const app = require("./app");
 const initSockets = require("./sockets");
+const { startJobs } = require("./jobs");
 const { isConfigured } = require("./services/email");
 
 function checkEmailConfig() {
@@ -24,6 +25,7 @@ async function start() {
 
   const server = http.createServer(app);
   initSockets(server);
+  startJobs();
 
   server.listen(env.port, () => logger.info(`Server running on port ${env.port}`));
 }

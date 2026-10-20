@@ -1,7 +1,7 @@
-const { Op } = require("sequelize");
-const { Post, User, Comment, Like, Connection } = require("../models");
+const { Post, User, Comment, Like, SavedPost } = require("../models");
 const AppError = require("../utils/AppError");
 const { attachBlob } = require("./imageBlob");
+const { connectedUserIds } = require("./network");
 const realtime = require("../sockets/realtime");
 
 const announce = (id) => realtime.emitToAll("feed_changed", { kind: "post", id });
@@ -26,16 +26,6 @@ async function toJsonWithAvatar(post) {
   const json = post.toJSON();
   if (json.User) await attachBlob(json.User, "profile_pic", "profile_pic_blob");
   return json;
-}
-
-async function connectedUserIds(userId) {
-  const accepted = await Connection.findAll({
-    where: {
-      status: "accepted",
-      [Op.or]: [{ sender_id: userId }, { receiver_id: userId }],
-    },
-  });
-  return accepted.map((c) => (c.sender_id === userId ? c.receiver_id : c.sender_id));
 }
 
 async function create(userId, { content, image_url }) {
@@ -64,6 +54,14 @@ async function list({ userId, authorId }) {
   return Promise.all(posts.map(toJsonWithAvatar));
 }
 
+// The given posts in the given order (ids of deleted posts are skipped).
+async function listByIds(ids) {
+  if (!ids.length) return [];
+  const posts = await Post.findAll({ where: { id: ids }, include: postInclude });
+  const byId = new Map(posts.map((p) => [p.id, p]));
+  return Promise.all(ids.filter((id) => byId.has(id)).map((id) => toJsonWithAvatar(byId.get(id))));
+}
+
 async function getById(id) {
   const post = await Post.findByPk(id, { include: postInclude });
   if (!post) throw AppError.notFound("Post not found");
@@ -89,8 +87,9 @@ async function update(userId, id, { content, image_url }) {
 
 async function remove(userId, id) {
   const post = await loadOwned(userId, id);
+  await SavedPost.destroy({ where: { post_id: id } });
   await post.destroy();
   announce(post.id);
 }
 
-module.exports = { create, list, getById, update, remove };
+module.exports = { create, list, listByIds, getById, update, remove };

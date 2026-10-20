@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Message, User } = require("../models");
+const { Message, User, Post } = require("../models");
 const AppError = require("../utils/AppError");
 const realtime = require("../sockets/realtime");
 const push = require("./push");
@@ -23,6 +23,11 @@ async function send({ senderId, receiverId, content, type = "text", onSaved }) {
   ]);
   if (!sender || !receiver) throw AppError.notFound("User not found");
 
+  // A shared post is sent as its id; make sure it exists so the card never points at nothing.
+  if (type === "post" && !(await Post.findByPk(Number(content)))) {
+    throw AppError.notFound("Post not found");
+  }
+
   const message = await Message.create({
     sender_id: senderId,
     receiver_id: receiverId,
@@ -38,7 +43,7 @@ async function send({ senderId, receiverId, content, type = "text", onSaved }) {
   push
     .sendToUser(receiverId, {
       title: sender.name || "Cedar Roots",
-      body: type === "text" ? content : `Sent you a ${type}`,
+      body: type === "text" ? content : type === "post" ? "Shared a post with you" : `Sent you a ${type}`,
       data: {
         senderId,
         senderName: sender.name || "",

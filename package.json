@@ -9,6 +9,7 @@
     "lint": "eslint src tests",
     "format": "prettier --write src tests",
     "smoke": "node scripts/smoke.js",
+    "smoke:features": "node scripts/smoke-features.js",
     "migrate": "node scripts/migrate-schema.js"
   },
   "keywords": [],

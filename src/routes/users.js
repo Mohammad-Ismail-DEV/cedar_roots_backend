@@ -6,6 +6,9 @@ const v = require("../validators/user");
 const c = require("../controllers/user");
 
 router.get("/", auth, validate({ query: v.listQuery }), c.list);
+router.get("/me/preferences", auth, c.getPreferences);
+router.put("/me/preferences", auth, validate({ body: v.preferences }), c.updatePreferences);
+router.get("/:id/presence", auth, validate({ params: idParams }), c.presence);
 router.get("/:id", auth, validate({ params: idParams }), c.getById);
 router.put("/:id", auth, validate({ params: idParams, body: v.update }), c.update);
 router.delete("/:id", auth, validate({ params: idParams }), c.remove);

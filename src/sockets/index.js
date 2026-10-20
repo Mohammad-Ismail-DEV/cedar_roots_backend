@@ -3,6 +3,7 @@ const env = require("../config/env");
 const logger = require("../utils/logger");
 const { verifyToken } = require("../middleware/auth");
 const realtime = require("./realtime");
+const presence = require("../services/presence");
 
 const handlers = [
   require("./handlers/presence"),
@@ -37,11 +38,17 @@ module.exports = function initSockets(server) {
 
   io.on("connection", (socket) => {
     logger.debug({ socketId: socket.id }, "socket connected");
-    if (socket.data.authenticated) socket.join(realtime.userRoom(socket.data.userId));
+    if (socket.data.authenticated) {
+      socket.join(realtime.userRoom(socket.data.userId));
+      presence.connected(socket.data.userId).catch(() => {});
+    }
 
     handlers.forEach((register) => register(socket));
 
-    socket.on("disconnect", () => logger.debug({ socketId: socket.id }, "socket disconnected"));
+    socket.on("disconnect", () => {
+      logger.debug({ socketId: socket.id }, "socket disconnected");
+      if (socket.data.authenticated) presence.disconnected(socket.data.userId).catch(() => {});
+    });
   });
 
   return io;

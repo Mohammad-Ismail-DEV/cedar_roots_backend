@@ -30,6 +30,13 @@ db.Post = require("./Post")(sequelize, DataTypes);
 db.Comment = require("./Comment")(sequelize, DataTypes);
 db.Like = require("./Like")(sequelize, DataTypes);
 db.Announcement = require("./Announcement")(sequelize, Sequelize);
+db.Story = require("./Story")(sequelize, DataTypes);
+db.StoryView = require("./StoryView")(sequelize, DataTypes);
+db.SavedPost = require("./SavedPost")(sequelize, DataTypes);
+db.UserPreference = require("./UserPreference")(sequelize, DataTypes);
+db.EventReminder = require("./EventReminder")(sequelize, DataTypes);
+db.UserPresence = require("./UserPresence")(sequelize, DataTypes);
+db.EmailChange = require("./EmailChange")(sequelize, DataTypes);
 
 // User ↔ UserVerification
 db.User.hasOne(db.UserVerification, { foreignKey: "user_id" });
@@ -123,6 +130,17 @@ db.Like.belongsTo(db.User, { foreignKey: "user_id", as: "Liker" }); // alias for
 // Announcements
 db.Event.hasMany(db.Announcement, { foreignKey: "event_id" });
 db.Announcement.belongsTo(db.Event, { foreignKey: "event_id" });
+
+// Stories
+db.User.hasMany(db.Story, { foreignKey: "user_id" });
+db.Story.belongsTo(db.User, { foreignKey: "user_id" });
+db.Story.hasMany(db.StoryView, { foreignKey: "story_id", as: "Views" });
+db.StoryView.belongsTo(db.Story, { foreignKey: "story_id" });
+db.StoryView.belongsTo(db.User, { foreignKey: "viewer_id", as: "Viewer" });
+
+// Saved posts
+db.SavedPost.belongsTo(db.Post, { foreignKey: "post_id" });
+db.SavedPost.belongsTo(db.User, { foreignKey: "user_id" });
 
 //Event Participants
 db.EventParticipant.belongsTo(db.User, { foreignKey: "user_id" });
