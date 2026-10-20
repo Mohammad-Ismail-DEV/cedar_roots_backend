@@ -23,6 +23,7 @@ app.use(
   imageVariants,
   express.static(env.uploadsDir, { maxAge: "365d", immutable: true })
 );
+app.use("/p", require("./routes/share"));
 app.use(routes);
 
 app.use(notFoundHandler);
