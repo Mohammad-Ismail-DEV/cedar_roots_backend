@@ -68,7 +68,10 @@ async function feed(userId) {
   const [seen, counts] = await Promise.all([
     StoryView.findAll({ where: { viewer_id: userId, story_id: ids }, attributes: ["story_id"] }),
     StoryView.findAll({
-      where: { story_id: stories.filter((s) => s.user_id === userId).map((s) => s.id) },
+      where: {
+        story_id: stories.filter((s) => s.user_id === userId).map((s) => s.id),
+        viewer_id: { [Op.ne]: userId },
+      },
       attributes: ["story_id"],
     }),
   ]);
@@ -87,7 +90,7 @@ async function feed(userId) {
     groups
       .get(story.user_id)
       .stories.push(
-        storyJson(story, mine || seenIds.has(story.id), mine ? viewCounts.get(story.id) || 0 : undefined)
+        storyJson(story, seenIds.has(story.id), mine ? viewCounts.get(story.id) || 0 : undefined)
       );
   }
 
@@ -111,12 +114,13 @@ async function loadActive(storyId) {
   return story;
 }
 
-// Records that `userId` watched a story. Watching your own story counts for nothing.
+// Records that `userId` watched a story. Watching your own story only greys your own ring: it
+// is not listed or counted among the viewers.
 async function view(userId, storyId) {
   const story = await loadActive(storyId);
-  if (story.user_id === userId) return { viewed: false };
+  const own = story.user_id === userId;
 
-  if (!(await areConnected(userId, story.user_id))) {
+  if (!own && !(await areConnected(userId, story.user_id))) {
     throw AppError.forbidden("You can only view stories from your connections");
   }
 
@@ -124,7 +128,7 @@ async function view(userId, storyId) {
     where: { story_id: storyId, viewer_id: userId },
     defaults: { viewed_at: new Date() },
   });
-  if (created) realtime.emitToUser(story.user_id, "story_viewed", { storyId, viewerId: userId });
+  if (created && !own) realtime.emitToUser(story.user_id, "story_viewed", { storyId, viewerId: userId });
   return { viewed: true };
 }
 
@@ -134,7 +138,7 @@ async function viewers(userId, storyId) {
   if (story.user_id !== userId) throw AppError.forbidden("Only the author can see who viewed");
 
   const views = await StoryView.findAll({
-    where: { story_id: storyId },
+    where: { story_id: storyId, viewer_id: { [Op.ne]: userId } },
     include: [{ model: User, as: "Viewer", attributes: authorAttrs }],
     order: [["viewed_at", "DESC"]],
   });

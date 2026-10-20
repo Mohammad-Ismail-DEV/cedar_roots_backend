@@ -109,14 +109,14 @@ describe("stories", () => {
     ]);
     // I have seen story 10 (user 2) but not 11 (user 3).
     models.StoryView.findAll
-      .mockResolvedValueOnce([{ story_id: 10 }])
+      .mockResolvedValueOnce([{ story_id: 10 }, { story_id: 12 }])
       .mockResolvedValueOnce([{ story_id: 12 }, { story_id: 12 }]);
 
     const feed = await story.feed(1);
 
     expect(feed.map((g) => g.user.id)).toEqual([1, 3, 2]);
     expect(feed[0].stories[0].view_count).toBe(2);
-    expect(feed[0].all_seen).toBe(true);
+    expect(feed[0].all_seen).toBe(true); // I watched my own story
     expect(feed[1].all_seen).toBe(false);
     expect(feed[2].all_seen).toBe(true);
     expect(feed[1].stories[0]).not.toHaveProperty("view_count");
@@ -161,14 +161,16 @@ describe("stories", () => {
     expect(realtime.emitToUser).not.toHaveBeenCalled();
   });
 
-  test("watching your own story is not recorded", async () => {
+  test("watching your own story is remembered but never notifies or counts", async () => {
     models.Story.findByPk.mockResolvedValue({
       id: 5,
       user_id: 1,
       expires_at: new Date(Date.now() + 100000),
     });
-    expect(await story.view(1, 5)).toEqual({ viewed: false });
-    expect(models.StoryView.findOrCreate).not.toHaveBeenCalled();
+    models.StoryView.findOrCreate.mockResolvedValue([{}, true]);
+    expect(await story.view(1, 5)).toEqual({ viewed: true });
+    expect(models.StoryView.findOrCreate).toHaveBeenCalled();
+    expect(realtime.emitToUser).not.toHaveBeenCalled();
   });
 
   test("only the author sees who viewed", async () => {
