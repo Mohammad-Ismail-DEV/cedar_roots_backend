@@ -1,2 +1,6 @@
 node_modules
 uploads
+.env
+firebase-settings.json
+backups
+image-cache
