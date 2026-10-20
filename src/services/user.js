@@ -14,21 +14,32 @@ const {
   OrganizationMember,
   OrganizationFollower,
   UserVerification,
+  Story,
+  StoryView,
+  SavedPost,
+  UserPreference,
+  UserPresence,
+  EventReminder,
+  EmailChange,
 } = require("../models");
 const AppError = require("../utils/AppError");
 const { getBlob } = require("./imageBlob");
+
+const profileAttrs = ["id", "name", "profile_pic", "bio", "location"];
 
 const withBlob = async (user) => ({
   id: user.id,
   name: user.name,
   profile_pic: user.profile_pic,
+  bio: user.bio ?? null,
+  location: user.location ?? null,
   profile_pic_blob: await getBlob(user.profile_pic),
 });
 
 async function list({ search }) {
   const users = await User.findAll({
     where: search ? { name: { [Op.like]: `%${search}%` } } : undefined,
-    attributes: ["id", "name", "email", "profile_pic"],
+    attributes: [...profileAttrs, "email"],
     limit: search ? 20 : 50,
   });
 
@@ -36,7 +47,7 @@ async function list({ search }) {
 }
 
 async function getById(id) {
-  const user = await User.findByPk(id, { attributes: ["id", "name", "profile_pic"] });
+  const user = await User.findByPk(id, { attributes: profileAttrs });
   if (!user) throw AppError.notFound("User not found");
   return withBlob(user);
 }
@@ -47,7 +58,7 @@ async function update(actorId, id, fields) {
   const [updated] = await User.update({ ...fields, updated_at: new Date() }, { where: { id } });
   if (!updated) throw AppError.notFound("User not found");
 
-  return User.findByPk(id, { attributes: ["id", "name", "profile_pic"] });
+  return withBlob(await User.findByPk(id, { attributes: profileAttrs }));
 }
 
 async function remove(actorId, id) {
@@ -86,8 +97,24 @@ async function remove(actorId, id) {
       where: { [Op.or]: [{ user_id: id }, { post_id: postIds }] },
       transaction,
     });
+    await SavedPost.destroy({
+      where: { [Op.or]: [{ user_id: id }, { post_id: postIds }] },
+      transaction,
+    });
+    const storyIds = (
+      await Story.findAll({ where: { user_id: id }, attributes: ["id"], transaction })
+    ).map((s) => s.id);
+    await StoryView.destroy({
+      where: { [Op.or]: [{ viewer_id: id }, { story_id: storyIds }] },
+      transaction,
+    });
+    await Story.destroy({ where: { user_id: id }, transaction });
     await Post.destroy({ where: { id: postIds }, transaction });
     for (const model of [
+      UserPreference,
+      UserPresence,
+      EventReminder,
+      EmailChange,
       Notification,
       FirebaseToken,
       SearchHistory,

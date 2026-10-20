@@ -1,6 +1,7 @@
 const postService = require("../services/post");
 const commentService = require("../services/comment");
 const likeService = require("../services/like");
+const savedPostService = require("../services/savedPost");
 
 exports.create = async (req, res) => res.json(await postService.create(req.user.id, req.body));
 exports.list = async (req, res) =>
@@ -36,3 +37,8 @@ exports.removeComment = async (req, res) => {
   await commentService.remove(req.user.id, req.valid.params.id);
   res.json({ message: "Comment deleted" });
 };
+
+exports.toggleSave = async (req, res) =>
+  res.json(await savedPostService.toggle(req.user.id, req.valid.params.postId));
+exports.savedIds = async (req, res) => res.json(await savedPostService.ids(req.user.id));
+exports.listSaved = async (req, res) => res.json(await savedPostService.list(req.user.id));

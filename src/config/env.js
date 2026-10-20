@@ -14,6 +14,12 @@ function required(name) {
 module.exports = {
   isTest,
   port: Number(process.env.PORT) || 3000,
+  // SHA-256 fingerprints (comma separated) of the keys the Android app is signed with; they let
+  // https://<host>/p/<id> links open straight in the app.
+  androidCertFingerprints: (process.env.ANDROID_CERT_SHA256 || "")
+    .split(",")
+    .map((f) => f.trim())
+    .filter(Boolean),
   jwt: {
     secret: required("JWT_SECRET") || "test-secret",
     expiresIn: process.env.JWT_EXPIRES_IN || "30d",

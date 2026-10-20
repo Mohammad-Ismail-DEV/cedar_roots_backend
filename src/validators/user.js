@@ -1,6 +1,9 @@
 const { z, optionalText } = require("./common");
 
 module.exports = {
+  preferences: z
+    .object({ push_enabled: z.boolean().optional(), event_reminders: z.boolean().optional() })
+    .refine((o) => Object.keys(o).length > 0, { message: "nothing to update" }),
   listQuery: z.object({ search: z.string().trim().max(100).optional() }),
   update: z.object({
     name: z.string().trim().min(1).max(100).optional(),

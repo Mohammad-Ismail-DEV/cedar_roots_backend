@@ -1,6 +1,7 @@
 const { FirebaseToken } = require("../models");
 const firebase = require("../config/firebase");
 const logger = require("../utils/logger");
+const preference = require("./preference");
 
 const STALE_TOKEN_CODES = new Set([
   "messaging/registration-token-not-registered",
@@ -12,6 +13,7 @@ const stringifyData = (data) =>
 
 async function sendToUser(userId, { title, body, data = {} }) {
   if (!firebase.isEnabled()) return;
+  if (!(await preference.get(userId)).push_enabled) return;
 
   const tokens = await FirebaseToken.findAll({ where: { user_id: userId } });
   const payload = stringifyData(data);

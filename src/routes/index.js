@@ -15,5 +15,6 @@ router.use("/posts", require("./posts"));
 router.use("/comments", require("./comments"));
 router.use("/likes", require("./likes"));
 router.use("/search", require("./search"));
+router.use("/stories", require("./stories"));
 
 module.exports = router;

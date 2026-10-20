@@ -10,7 +10,7 @@ module.exports = {
     senderId: id.optional(),
     receiverId: id,
     content,
-    type: z.enum(["text", "image"]).default("text"),
+    type: z.enum(["text", "image", "post"]).default("text"),
     local_id: z.union([z.string(), z.number()]).optional(),
   }),
   socketHistory: z.object({

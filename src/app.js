@@ -23,6 +23,20 @@ app.use(
   imageVariants,
   express.static(env.uploadsDir, { maxAge: "365d", immutable: true })
 );
+// Android App Links: tells Android this server's /p/ links belong to the app.
+app.get("/.well-known/assetlinks.json", (req, res) =>
+  res.json([
+    {
+      relation: ["delegate_permission/common.handle_all_urls"],
+      target: {
+        namespace: "android_app",
+        package_name: "com.mohamadismail.cedarroots",
+        sha256_cert_fingerprints: env.androidCertFingerprints,
+      },
+    },
+  ])
+);
+app.use("/p", require("./routes/share"));
 app.use(routes);
 
 app.use(notFoundHandler);
