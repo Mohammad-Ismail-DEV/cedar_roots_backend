@@ -143,7 +143,9 @@ async function checkPassword(userId, password) {
   const user = await User.findByPk(userId);
   if (!user) throw AppError.notFound("User not found");
   if (!(await bcrypt.compare(password, user.password_hash))) {
-    throw AppError.unauthorized("Current password is incorrect");
+    // 403, not 401: the app signs people out on 401 (an expired token), and a typo in this
+    // field must not do that.
+    throw AppError.forbidden("Current password is incorrect");
   }
   return user;
 }

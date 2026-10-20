@@ -130,7 +130,7 @@ async function run() {
     token: ta,
     body: { current_password: "nope", new_password: "Brand-new1" },
   });
-  check("change password: wrong current -> 401", wrongPw.status === 401);
+  check("change password: wrong current -> 403 (not 401, which signs the app out)", wrongPw.status === 403);
   const okPw = await api("POST", "/auth/change-password", {
     token: ta,
     body: { current_password: "Passw0rd!", new_password: "Brand-new1" },

@@ -387,7 +387,7 @@ describe("changing password and email", () => {
     models.User.findByPk.mockResolvedValue(await user());
     await expect(
       auth.changePassword(1, { current_password: "wrong", new_password: "new-pass" })
-    ).rejects.toMatchObject({ status: 401 });
+    ).rejects.toMatchObject({ status: 403 });
   });
 
   test("a correct current password sets the new one", async () => {
